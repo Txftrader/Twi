@@ -296,9 +296,12 @@
         }
       }
 
+      // 輪巡順序：手動 IP（有填才優先）→ 內建伺服器列表 → ?server= 附加。
+      // 注意：label 一律只放「伺服器名稱」，不可以把網址/IP 拼進去——
+      // 輪巡時的「輪巡中：xxx」狀態列、以及全部連不上時的說明窗清單，
+      // 都會原樣顯示這個 label，拼了網址等於把手機畫面上直接曝露 IP。
       function buildServerQueue() {
         const queue = [];
-        let extraCount = 0;
         const manual = normalizeBaseUrl(manualInput.value);
         if (manual) {
           queue.push({ label: "手動伺服器", url: manual });
@@ -309,6 +312,7 @@
           queue.push({ label: String((item && item.label) || "伺服器"), url: url });
         });
         const params = new URLSearchParams(window.location.search);
+        let extraCount = 0;
         (params.getAll("server") || []).forEach(function (extra) {
           const url = normalizeBaseUrl(extra);
           if (url && !queue.some(function (e) { return e.url === url; })) {
@@ -534,6 +538,7 @@
           row.className = "manual-connect-row";
           const info = document.createElement("span");
           info.className = "mc-label";
+          // 只顯示名稱、不帶網址：HTTPS 橫幅清單也是手機看得到的地方。
           info.textContent = entry.label;
           const btn = document.createElement("button");
           btn.type = "button";
