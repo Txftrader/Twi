@@ -150,6 +150,7 @@
     .retry-server-state { flex-shrink: 0; }
     .retry-ok { color: var(--fall); }
     .retry-fail { color: var(--rise); }
+    .retry-unknown { color: var(--muted); }
     .gate-actions { display: grid; gap: 8px; margin-top: 12px; }
   </style>
 </head>
@@ -207,6 +208,8 @@
       <div id="retry-server-list" class="retry-server-list"></div>
       <p id="retry-note" class="tiny muted">
         已自動輪巡伺服器列表 3 次都連不上。請確認電腦端程式已開啟，再按「連線」重新嘗試。
+        標示「無法自動偵測（http）」的伺服器，是因為本頁是 https，瀏覽器安全機制不允許主動連線去偵測純
+        http 的伺服器是否開啟——不代表它真的無回應，可直接按「直接登入」試試看。
       </p>
       <div class="gate-actions">
         <button id="retry-connect-button" type="button" class="primary-btn">連線</button>
@@ -217,13 +220,12 @@
 
   <script>
     (function () {
-      // 伺服器1、2：Tailscale 憑證簽給 MagicDNS 主機名稱，走 https。
-      // 伺服器3：固定 IP、沒有 HTTPS 憑證，主程式另開純 HTTP 埠 5001
-      // 給 IP 直連（5000 只講 TLS，用 http 打會 ERR_TIMED_OUT）。
+      // 憑證是簽給 Tailscale 的 MagicDNS 主機名稱，不能再用 IP，
+      // 請把下面換成 `tailscale status` 查到的實際名稱。
       const DEFAULT_SERVERS = [
         { label: "伺服器1", url: "https://i7-14700.taild027aa.ts.net:5000" },
         { label: "伺服器2", url: "https://csc-win10-mini.taild027aa.ts.net:5000" },
-        { label: "伺服器3", url: "http://122.117.148.43:5001" }
+        { label: "伺服器3", url: "https://REPLACE-WITH-SERVER3-HOSTNAME.ts.net:5000" }
       ];
       const LOGIN_ROUNDS = 3;
       const PROBE_TIMEOUT_MS = 2500;
@@ -354,9 +356,33 @@
         });
       }
 
+      // 瀏覽器的「混合內容（Mixed Content）」安全限制：頁面本身是 https 時，
+      // 完全無法用 fetch / <script> / <img> 對 http:// 的伺服器發出主動請求
+      // ——瀏覽器會直接擋下來，連網路都不會真的送出去。這不是我們程式能繞過的，
+      // 所以這種情況下不要再浪費時間空等 timeout，也不能謊稱「無回應」
+      // （因為根本沒真的探測到），要回傳 null 表示「無法自動偵測」。
+      function isMixedContentBlocked(url) {
+        return window.location.protocol === "https:" && /^http:\/\//i.test(url);
+      }
+
       async function probeServer(url, timeoutMs) {
+        if (isMixedContentBlocked(url)) return null;
         if (await probeByFetch(url, timeoutMs)) return true;
-        return probeByScriptTag(url, Math.max(timeoutMs, 3000));
+        if (await probeByScriptTag(url, Math.max(timeoutMs, 3000))) return true;
+        return false;
+      }
+
+      // 讓「輪巡中：xxx」這個狀態列至少停留一小段時間再切下一個，
+      // 不然像手動伺服器/http 伺服器這種會被瀏覽器直接擋下、幾乎零延遲
+      // 就失敗的情況，畫面一閃而過，使用者會覺得「根本沒被嘗試過」。
+      async function probeServerVisible(url, timeoutMs, minVisibleMs) {
+        const started = Date.now();
+        const result = await probeServer(url, timeoutMs);
+        const elapsed = Date.now() - started;
+        if (elapsed < minVisibleMs) {
+          await new Promise(function (resolve) { setTimeout(resolve, minVisibleMs - elapsed); });
+        }
+        return result;
       }
 
       function submitLoginTo(url, username, password) {
@@ -383,8 +409,10 @@
 
       function renderRetryList(results, withDirectButtons) {
         retryListEl.innerHTML = results.map(function (entry, index) {
-          const stateClass = entry.alive ? "retry-ok" : "retry-fail";
-          const stateText = entry.alive ? "可連線" : "無回應";
+          // alive: true=可連線, false=真的探測到無回應, null=瀏覽器混合內容限制，
+          // 無法自動偵測（多半是 https 頁面連 http 伺服器），不能誤標成「無回應」。
+          const stateClass = entry.alive === true ? "retry-ok" : (entry.alive === false ? "retry-fail" : "retry-unknown");
+          const stateText = entry.alive === true ? "可連線" : (entry.alive === false ? "無回應" : "無法自動偵測（http）");
           const directBtn = withDirectButtons
             ? '<button type="button" data-direct-index="' + index + '" class="direct-login-btn">直接登入</button>'
             : "";
@@ -417,15 +445,18 @@
           return;
         }
         const results = queue.map(function (entry) {
-          return { label: entry.label, url: entry.url, alive: false };
+          return { label: entry.label, url: entry.url, alive: null };
         });
         for (let round = 1; round <= LOGIN_ROUNDS; round++) {
           setLoginBusy("搜尋伺服器中...（第 " + round + "/" + LOGIN_ROUNDS + " 輪）");
+          // queue[0] 若有手動伺服器一定排最前面，每輪都一定最優先被嘗試；
+          // 用 probeServerVisible 確保畫面上看得到「輪巡中：手動伺服器」，
+          // 不會因為 http 被瀏覽器秒擋而像是沒被嘗試過。
           for (let i = 0; i < queue.length; i++) {
             selectedServerLabel.textContent = "輪巡中：" + queue[i].label;
-            const alive = await probeServer(queue[i].url, PROBE_TIMEOUT_MS);
+            const alive = await probeServerVisible(queue[i].url, PROBE_TIMEOUT_MS, 500);
             results[i].alive = alive;
-            if (alive) {
+            if (alive === true) {
               submitLoginTo(queue[i].url, username, password);
               return;
             }
