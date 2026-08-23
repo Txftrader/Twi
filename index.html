@@ -3,40 +3,206 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>手機看盤登入</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ asset_version('app.css') }}">
-  <link rel="icon" href="{{ url_for('static', filename='icons/favicon.ico') }}">
-  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32.png') }}">
-  <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='icons/favicon-16.png') }}">
-  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-  <meta name="theme-color" content="#09111d">
+  <title>手機看盤登入（GitHub 版）</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #09111d;
+      --card: #132137;
+      --card-soft: #16263d;
+      --text: #eef3fb;
+      --muted: #95a7c3;
+      --accent: #4a9cff;
+      --rise: #ff4d4f;
+      --fall: #34d058;
+      --border: rgba(255, 255, 255, 0.07);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(180deg, #070d15 0%, var(--bg) 100%);
+      color: var(--text);
+      font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+      padding: 8px 8px 18px;
+    }
+    a { color: inherit; text-decoration: none; }
+    .auth-shell { width: 100%; max-width: 420px; margin: 4vh auto 0; }
+    .auth-card {
+      background: rgba(19, 33, 55, 0.94);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+    }
+    .eyebrow {
+      font-size: 0.62rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .auth-card h1 { margin: 2px 0 0; font-size: 0.95rem; line-height: 1.15; }
+    .muted { color: var(--muted); }
+    .tiny { font-size: 0.7rem; }
+    .server-box {
+      display: grid;
+      gap: 6px;
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      margin: 14px 0 6px;
+    }
+    .server-box div { display: flex; justify-content: space-between; gap: 10px; }
+    .server-box span { font-size: 0.72rem; color: var(--muted); }
+    .server-box strong { font-size: 0.82rem; word-break: break-all; text-align: right; }
+    .auth-form { display: grid; gap: 12px; margin-top: 14px; }
+    .auth-form label { display: grid; gap: 4px; font-size: 0.78rem; }
+    input[type="text"], input[type="password"] {
+      min-height: 38px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 0 10px;
+      font: inherit;
+      font-size: 0.82rem;
+      background: rgba(8, 18, 31, 0.85);
+      color: var(--text);
+      width: 100%;
+    }
+    input:focus { outline: none; border-color: rgba(74, 156, 255, 0.6); }
+    .primary-btn, .secondary-btn {
+      min-height: 38px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 0 10px;
+      font: inherit;
+      font-size: 0.82rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .primary-btn {
+      background: linear-gradient(135deg, var(--accent), #3078ff);
+      color: #fff;
+      font-weight: 700;
+      width: 100%;
+    }
+    .primary-btn:disabled { opacity: 0.55; cursor: default; }
+    .secondary-btn { background: rgba(255, 255, 255, 0.04); color: var(--text); }
+    .error-text { color: var(--rise); font-size: 0.78rem; margin: 10px 0 0; }
+    details.advanced { margin-top: 12px; }
+    details.advanced summary {
+      cursor: pointer;
+      font-size: 0.82rem;
+      color: var(--muted);
+      user-select: none;
+    }
+    details.advanced[open] summary { color: var(--text); }
+    details.advanced .advanced-body { margin-top: 10px; display: grid; gap: 4px; font-size: 0.78rem; }
+    .hint-line { font-size: 0.7rem; color: var(--muted); margin: 12px 0 0; line-height: 1.5; }
+    .env-banner {
+      display: grid;
+      gap: 8px;
+      margin: 14px 0 0;
+      padding: 10px 12px;
+      border: 1px solid rgba(74, 156, 255, 0.35);
+      border-radius: 12px;
+      background: rgba(74, 156, 255, 0.08);
+      font-size: 0.74rem;
+      line-height: 1.55;
+    }
+    .env-banner[hidden] { display: none; }
+    .manual-connect-list { display: grid; gap: 6px; margin-top: 4px; }
+    .manual-connect-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .manual-connect-row .mc-label { font-size: 0.76rem; word-break: break-all; }
+    .manual-connect-row .mc-label small { display: block; color: var(--muted); font-size: 0.66rem; }
+    .manual-connect-row button {
+      flex-shrink: 0;
+      min-height: 32px;
+      border-radius: 8px;
+      border: 1px solid rgba(74, 156, 255, 0.5);
+      background: rgba(74, 156, 255, 0.14);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.74rem;
+      cursor: pointer;
+      padding: 0 12px;
+    }
+    .http-switch {
+      align-self: start;
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent), #3078ff);
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.74rem;
+    }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 9, 17, 0.72);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 50;
+    }
+    .modal-overlay[hidden] { display: none; }
+    .sheet {
+      width: 100%;
+      max-width: 360px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .sheet-head h3 { margin: 0; font-size: 0.9rem; }
+    .retry-server-list { display: grid; gap: 6px; margin: 12px 0; }
+    .retry-server-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      font-size: 0.76rem;
+    }
+    .retry-server-label { word-break: break-all; }
+    .retry-server-state { flex-shrink: 0; }
+    .retry-ok { color: var(--fall); }
+    .retry-fail { color: var(--rise); }
+    .gate-actions { display: grid; gap: 8px; margin-top: 12px; }
+  </style>
 </head>
-<body class="app-body auth-body" data-page="login">
+<body data-page="login">
   <main class="auth-shell">
     <section class="auth-card">
       <div class="eyebrow">RTD Mobile Dashboard</div>
       <h1>手機版即時走勢</h1>
-      <p class="muted">
-      </p>
 
       <div class="server-box">
         <div><span>連線目標</span><strong id="selected-server-label">自動輪巡伺服器列表</strong></div>
         <div><span>帳號</span><strong id="login-username-preview">--</strong></div>
       </div>
 
+      <div id="https-banner" class="env-banner" hidden>
+        <span>目前以 <b>HTTPS</b> 開啟本頁，瀏覽器會封鎖對 HTTP 伺服器的自動偵測，無法自動輪巡。</span>
+        <a id="http-switch-link" class="http-switch" href="#">切換到 HTTP 版（恢復自動輪巡）</a>
+        <span>或直接點擊下方伺服器登入（瀏覽器可能再詢問一次確認）：</span>
+        <div id="manual-connect-list" class="manual-connect-list"></div>
+      </div>
+
       <form id="login-form" class="auth-form">
-        <label>
-          <span>手動 IP（優先，可不填）</span>
-          <input
-            id="manual-server-input"
-            type="text"
-            name="manual_server"
-            inputmode="url"
-            placeholder="{{ manual_placeholder }}"
-            autocomplete="off"
-          >
-        </label>
         <label>
           <span>帳號</span>
           <input type="text" name="username" autocomplete="username" required>
@@ -50,69 +216,35 @@
 
       <p id="login-error" class="error-text" hidden></p>
 
-      <button id="show-add-user-button" type="button" class="secondary-btn add-user-entry">新增使用者</button>
+      <details class="advanced">
+        <summary>進階：手動指定伺服器 ▾</summary>
+        <div class="advanced-body">
+          <label>
+            <span>手動 IP（優先，可不填）</span>
+            <input
+              id="manual-server-input"
+              type="text"
+              name="manual_server"
+              inputmode="url"
+              placeholder="例：192.168.1.100:5000"
+              autocomplete="off"
+            >
+          </label>
+          <p class="tiny muted">填了手動 IP 會最優先嘗試；沒填就照下方內建伺服器列表依序輪巡。</p>
+        </div>
+      </details>
 
-      <p id="add-user-status" class="status-text" hidden></p>
-
-      <p class="tiny muted">登入時會自動輪巡伺服器列表內的伺服器（手動 IP 優先），不必挑選。全部連不上時可再按「連線」重試。</p>
-    </section>
+          </section>
   </main>
 
-  <!-- 新增使用者彈出視窗：第一步管理者驗證 → 通過後切換到第二步新增帳密 -->
-  <div id="add-user-modal" class="modal-overlay add-user-modal" hidden>
-    <div class="add-user-sheet">
-      <div class="add-user-head">
-        <h3 id="add-user-title">管理者驗證</h3>
-        <button id="close-add-user-modal" class="secondary-btn icon-btn" type="button" aria-label="關閉">✕</button>
-      </div>
-
-      <form id="admin-gate-form" class="auth-form">
-        <p class="tiny muted">新增使用者前，需先輸入管理者的帳號與密碼。</p>
-        <label>
-          <span>管理者帳號</span>
-          <input type="text" name="admin_username" autocomplete="off" required>
-        </label>
-        <label>
-          <span>管理者密碼</span>
-          <input type="password" name="admin_password" autocomplete="off" required>
-        </label>
-        <p id="gate-error" class="error-text" hidden></p>
-        <button type="submit" class="primary-btn">驗證</button>
-      </form>
-
-      <form id="new-user-form" class="auth-form" hidden>
-        <p class="tiny muted">管理者驗證成功。請輸入要新增的使用者帳號與密碼。</p>
-        <label>
-          <span>新使用者帳號</span>
-          <input type="text" name="new_username" autocomplete="off" required>
-        </label>
-        <label>
-          <span>新使用者密碼</span>
-          <input type="password" name="new_password" autocomplete="new-password" required>
-        </label>
-        <label>
-          <span>再輸入一次密碼</span>
-          <input type="password" name="new_password_confirm" autocomplete="new-password" required>
-        </label>
-        <p id="new-user-error" class="error-text" hidden></p>
-        <div class="gate-actions">
-          <button type="submit" class="primary-btn">確認新增</button>
-          <button type="button" id="back-to-gate-button" class="secondary-btn">上一步</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- 伺服器全部連不上時的說明窗：可按「連線」重試或「取消」放棄 -->
-  <div id="server-retry-modal" class="modal-overlay add-user-modal" hidden>
-    <div class="add-user-sheet">
-      <div class="add-user-head">
+  <div id="server-retry-modal" class="modal-overlay" hidden>
+    <div class="sheet">
+      <div class="sheet-head">
         <h3>伺服器尚未開啟</h3>
       </div>
       <div id="retry-server-list" class="retry-server-list"></div>
-      <p class="tiny muted">
-        已自動輪巡伺服器列表 3 次都連不上。請確認電腦端程式已開啟、
-        手機與電腦在同一個網路，再按「連線」重新嘗試。
+      <p id="retry-note" class="tiny muted">
+        已自動輪巡伺服器列表 3 次都連不上。請確認電腦端程式已開啟，再按「連線」重新嘗試。
       </p>
       <div class="gate-actions">
         <button id="retry-connect-button" type="button" class="primary-btn">連線</button>
@@ -122,12 +254,16 @@
   </div>
 
   <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", function () {
-        navigator.serviceWorker.register("/service-worker.js");
-      });
-    }
     (function () {
+      const DEFAULT_SERVERS = [
+        { label: "伺服器1", url: "http://100.107.49.78:5000" },
+        { label: "伺服器2", url: "http://100.126.62.12:5000" },
+        { label: "伺服器3", url: "http://122.117.148.43:5000" }
+      ];
+      const LOGIN_ROUNDS = 3;
+      const PROBE_TIMEOUT_MS = 2500;
+      const loginStateKey = "rtd-mobile-login-state";
+
       const form = document.getElementById("login-form");
       const errorEl = document.getElementById("login-error");
       const manualInput = document.getElementById("manual-server-input");
@@ -136,57 +272,50 @@
       const selectedServerLabel = document.getElementById("selected-server-label");
       const usernamePreview = document.getElementById("login-username-preview");
       const submitButton = document.getElementById("login-submit-button");
-      const serverChoices = {{ server_choices|tojson }};
-      const loginStateKey = "rtd-mobile-login-state";
-      const LOGIN_ROUNDS = 3;   // 自動輪巡次數（需求：輪巡列表內伺服器 3 次）
 
       const retryModal = document.getElementById("server-retry-modal");
       const retryListEl = document.getElementById("retry-server-list");
+      const retryNoteEl = document.getElementById("retry-note");
       const retryConnectButton = document.getElementById("retry-connect-button");
       const retryCancelButton = document.getElementById("retry-cancel-button");
 
-      const addUserButton = document.getElementById("show-add-user-button");
-      const addStatusEl = document.getElementById("add-user-status");
+      const httpsBanner = document.getElementById("https-banner");
+      const manualConnectList = document.getElementById("manual-connect-list");
+      const isHttpsPage = window.location.protocol === "https:";
+      let lastResults = [];
+      let roaming = false;
 
       function normalizeBaseUrl(value) {
         const raw = String(value || "").trim();
-        if (!raw) {
-          return "";
-        }
+        if (!raw) return "";
         const withScheme = /^https?:\/\//i.test(raw) ? raw : ("http://" + raw);
         try {
-          const parsed = new URL(withScheme);
-          return parsed.origin.replace(/\/$/, "");
+          return new URL(withScheme).origin.replace(/\/$/, "");
         } catch (_error) {
           return "";
         }
       }
 
-      // 輪巡順序：手動 IP（有填才優先）→ 伺服器列表 → 本機。
-      // 列表由 /admin 即時維護，這裡只負責照順序嘗試。
-      // 注意：label 一律只放「伺服器名稱」，不可以把網址/IP 拼進去——
-      // 輪巡時的「輪巡中：xxx」狀態列、以及全部連不上時的說明窗清單，
-      // 都會原樣顯示這個 label，拼了網址等於把手機畫面上直接曝露 IP。
       function buildServerQueue() {
         const queue = [];
+        let extraCount = 0;
         const manual = normalizeBaseUrl(manualInput.value);
         if (manual) {
           queue.push({ label: "手動伺服器", url: manual });
         }
-        (serverChoices || []).forEach(function (item) {
+        DEFAULT_SERVERS.forEach(function (item) {
           const url = normalizeBaseUrl(item && item.url);
-          if (!url) {
-            return;
-          }
-          if (queue.some(function (entry) { return entry.url === url; })) {
-            return;
-          }
+          if (!url || queue.some(function (e) { return e.url === url; })) return;
           queue.push({ label: String((item && item.label) || "伺服器"), url: url });
         });
-        const currentOrigin = normalizeBaseUrl(window.location.origin);
-        if (currentOrigin && !queue.some(function (entry) { return entry.url === currentOrigin; })) {
-          queue.push({ label: "目前網址", url: currentOrigin });
-        }
+        const params = new URLSearchParams(window.location.search);
+        (params.getAll("server") || []).forEach(function (extra) {
+          const url = normalizeBaseUrl(extra);
+          if (url && !queue.some(function (e) { return e.url === url; })) {
+            extraCount += 1;
+            queue.push({ label: "附加伺服器 " + extraCount, url: url });
+          }
+        });
         return queue;
       }
 
@@ -195,12 +324,11 @@
       }
 
       function saveLoginState() {
-        const data = {
-          manualServer: String(manualInput.value || "").trim(),
-          username: String(usernameInput.value || "").trim(),
-        };
         try {
-          window.localStorage.setItem(loginStateKey, JSON.stringify(data));
+          window.localStorage.setItem(loginStateKey, JSON.stringify({
+            manualServer: String(manualInput.value || "").trim(),
+            username: String(usernameInput.value || "").trim()
+          }));
         } catch (_error) { /* ignore */ }
       }
 
@@ -208,71 +336,66 @@
         let saved = {};
         try {
           saved = JSON.parse(window.localStorage.getItem(loginStateKey) || "{}");
-        } catch (_error) {
-          saved = {};
-        }
+        } catch (_error) { saved = {}; }
         const params = new URLSearchParams(window.location.search);
         const queryUsername = String(params.get("username") || "").trim();
-
-        if (!manualInput.value && saved.manualServer) {
-          manualInput.value = saved.manualServer;
-        }
-        if (queryUsername) {
-          usernameInput.value = queryUsername;
-        } else if (saved.username) {
-          usernameInput.value = saved.username;
+        const queryError = String(params.get("login_error") || "").trim();
+        if (!manualInput.value && saved.manualServer) manualInput.value = saved.manualServer;
+        if (queryUsername) usernameInput.value = queryUsername;
+        else if (saved.username) usernameInput.value = saved.username;
+        if (queryError) {
+          errorEl.textContent = queryError;
+          errorEl.hidden = false;
         }
         updateLabels();
       }
 
-      manualInput.addEventListener("input", saveLoginState);
-      usernameInput.addEventListener("input", function () {
-        saveLoginState();
-        updateLabels();
-      });
-
-      // 探測伺服器是否活著：no-cors 模式下，連不上（拒絕/逾時）會 reject；
-      // 拿到任何 opaque 回應都代表「伺服器開著」。真正的帳密驗證交給
-      // 後續的導頁表單 POST（頂層導航可寫 cookie，不受 SameSite/CORS 限制）。
-      function probeServer(url, timeoutMs) {
+      function probeByFetch(url, timeoutMs) {
         return new Promise(function (resolve) {
           let settled = false;
-          const timer = setTimeout(function () {
-            if (!settled) {
-              settled = true;
-              resolve(false);
-            }
-          }, timeoutMs);
+          const finish = function (ok) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            resolve(ok);
+          };
+          const timer = setTimeout(function () { finish(false); }, timeoutMs);
           fetch(url + "/api/session", { mode: "no-cors", cache: "no-store" })
-            .then(function () {
-              if (!settled) {
-                settled = true;
-                clearTimeout(timer);
-                resolve(true);
-              }
-            })
-            .catch(function () {
-              if (!settled) {
-                settled = true;
-                clearTimeout(timer);
-                resolve(false);
-              }
-            });
+            .then(function () { finish(true); })
+            .catch(function () { finish(false); });
         });
       }
 
-      // 用導頁表單把帳密 POST 到目標伺服器的 /api/login
-      // （redirect_mode=html：成功 302 到該機 /dashboard，失敗導回登入頁）。
+      function probeByScriptTag(url, timeoutMs) {
+        return new Promise(function (resolve) {
+          const scriptEl = document.createElement("script");
+          let settled = false;
+          const finish = function (ok) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            if (scriptEl.parentNode) scriptEl.parentNode.removeChild(scriptEl);
+            resolve(ok);
+          };
+          const timer = setTimeout(function () { finish(false); }, timeoutMs);
+          scriptEl.onload = function () { finish(true); };
+          scriptEl.onerror = function () { finish(false); };
+          scriptEl.src = url + "/api/session?probe=" + Date.now();
+          document.head.appendChild(scriptEl);
+        });
+      }
+
+      async function probeServer(url, timeoutMs) {
+        if (await probeByFetch(url, timeoutMs)) return true;
+        return probeByScriptTag(url, Math.max(timeoutMs, 3000));
+      }
+
       function submitLoginTo(url, username, password) {
         const formEl = document.createElement("form");
         formEl.method = "POST";
         formEl.action = url + "/api/login";
         formEl.style.display = "none";
-        const fields = {
-          username: username,
-          password: password,
-          redirect_mode: "html",
-        };
+        const fields = { username: username, password: password, redirect_mode: "html" };
         Object.keys(fields).forEach(function (name) {
           const input = document.createElement("input");
           input.type = "hidden";
@@ -289,26 +412,64 @@
         submitButton.textContent = busyText || "登入手機版看盤";
       }
 
-      function renderRetryList(results) {
-        retryListEl.innerHTML = results.map(function (entry) {
+      function renderRetryList(results, withDirectButtons) {
+        retryListEl.innerHTML = results.map(function (entry, index) {
           const stateClass = entry.alive ? "retry-ok" : "retry-fail";
           const stateText = entry.alive ? "可連線" : "無回應";
+          const directBtn = withDirectButtons
+            ? '<button type="button" data-direct-index="' + index + '" class="direct-login-btn">直接登入</button>'
+            : "";
           return (
-            `<div class="retry-server-row">` +
-              `<span class="retry-server-label">${entry.label}</span>` +
-              `<span class="retry-server-state ${stateClass}">${stateText}</span>` +
-            `</div>`
+            '<div class="retry-server-row">' +
+              '<span class="retry-server-label">' + entry.label + "</span>" +
+              '<span style="display:flex;gap:8px;align-items:center;flex-shrink:0;">' +
+                '<span class="retry-server-state ' + stateClass + '">' + stateText + "</span>" +
+                directBtn +
+              "</span>" +
+            "</div>"
           );
         }).join("");
+        retryListEl.querySelectorAll(".direct-login-btn").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            const entry = lastResults[Number(btn.getAttribute("data-direct-index"))];
+            const username = String(usernameInput.value || "").trim();
+            const password = String(passwordInput.value || "").trim();
+            if (!entry || !username || !password) return;
+            submitLoginTo(entry.url, username, password);
+          });
+        });
       }
 
-      let lastResults = [];
-      let roaming = false;
-
-      async function startRoamingLogin() {
-        if (roaming) {
+      async function runRoamingLogin(username, password) {
+        const queue = buildServerQueue();
+        if (!queue.length) {
+          errorEl.textContent = "伺服器列表是空的，請先輸入手動 IP";
+          errorEl.hidden = false;
           return;
         }
+        const results = queue.map(function (entry) {
+          return { label: entry.label, url: entry.url, alive: false };
+        });
+        for (let round = 1; round <= LOGIN_ROUNDS; round++) {
+          setLoginBusy("搜尋伺服器中...（第 " + round + "/" + LOGIN_ROUNDS + " 輪）");
+          for (let i = 0; i < queue.length; i++) {
+            selectedServerLabel.textContent = "輪巡中：" + queue[i].label;
+            const alive = await probeServer(queue[i].url, PROBE_TIMEOUT_MS);
+            results[i].alive = alive;
+            if (alive) {
+              submitLoginTo(queue[i].url, username, password);
+              return;
+            }
+          }
+          if (round < LOGIN_ROUNDS) renderRetryList(results, isHttpsPage);
+        }
+        lastResults = results;
+        renderRetryList(lastResults, true);
+        retryModal.hidden = false;
+      }
+
+      async function startRoamingLogin() {
+        if (roaming) return;
         const username = String(usernameInput.value || "").trim();
         const password = String(passwordInput.value || "").trim();
         if (!username || !password) {
@@ -325,42 +486,14 @@
         } finally {
           roaming = false;
           setLoginBusy("");
+          selectedServerLabel.textContent = "自動輪巡伺服器列表";
         }
       }
 
-      async function runRoamingLogin(username, password) {
-        const queue = buildServerQueue();
-        if (!queue.length) {
-          errorEl.textContent = "伺服器列表是空的，請先輸入手動 IP 或到管理頁新增伺服器";
-          errorEl.hidden = false;
-          return;
-        }
-        let results = queue.map(function (entry) {
-          return { label: entry.label, url: entry.url, alive: false };
-        });
-        for (let round = 1; round <= LOGIN_ROUNDS; round++) {
-          setLoginBusy(`搜尋伺服器中...（第 ${round}/${LOGIN_ROUNDS} 輪）`);
-          for (let i = 0; i < queue.length; i++) {
-            selectedServerLabel.textContent = `輪巡中：${queue[i].label}`;
-            // eslint-disable-next-line no-await-in-loop
-            const alive = await probeServer(queue[i].url, 2500);
-            results[i].alive = alive;
-            if (alive) {
-              // 伺服器開著 → 直接把帳密導頁過去登入；成功或密碼錯，
-              // 都會在目標伺服器上完成（成功進 dashboard、失敗回登入頁）。
-              submitLoginTo(queue[i].url, username, password);
-              return;
-            }
-          }
-          if (round < LOGIN_ROUNDS) {
-            renderRetryList(results); // 讓說明窗即時顯示目前探測狀況
-          }
-        }
-        // 3 輪全部失敗 → 說明窗（連線 / 取消）
-        lastResults = results;
-        renderRetryList(lastResults);
-        retryModal.hidden = false;
-      }
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        startRoamingLogin();
+      });
 
       retryConnectButton.addEventListener("click", async function () {
         const username = String(usernameInput.value || "").trim();
@@ -386,150 +519,42 @@
         selectedServerLabel.textContent = "自動輪巡伺服器列表";
       });
 
-      form.addEventListener("submit", async function (event) {
-        event.preventDefault();
-        await startRoamingLogin();
+      manualInput.addEventListener("input", saveLoginState);
+      usernameInput.addEventListener("input", function () {
+        saveLoginState();
+        updateLabels();
       });
 
-      // ---- 新增使用者（需求 2）：彈出視窗，先驗管理者帳密，成功後切換
-      // 到新增帳密表單。整個流程都在 modal 內完成，不打斷登入頁輸入。----
-      const addUserModal = document.getElementById("add-user-modal");
-      const adminGateForm = document.getElementById("admin-gate-form");
-      const newUserForm = document.getElementById("new-user-form");
-      const addModalTitle = document.getElementById("add-user-title");
-      const closeAddModalButton = document.getElementById("close-add-user-modal");
-      const backToGateButton = document.getElementById("back-to-gate-button");
-      const gateErrorEl = document.getElementById("gate-error");
-      const newUserErrorEl = document.getElementById("new-user-error");
-
-      function setAddStatus(text, isError) {
-        addStatusEl.textContent = text || "";
-        addStatusEl.classList.toggle("error-text", !!isError);
-        addStatusEl.hidden = !text;
-      }
-
-      function showGateStep() {
-        addUserModal.hidden = false;
-        adminGateForm.hidden = false;
-        newUserForm.hidden = true;
-        addModalTitle.textContent = "管理者驗證";
-        gateErrorEl.hidden = true;
-        adminGateForm.querySelector("input[name='admin_username']").focus();
-      }
-
-      function showNewUserStep() {
-        adminGateForm.hidden = true;
-        newUserForm.hidden = false;
-        addModalTitle.textContent = "新增使用者";
-        newUserErrorEl.hidden = true;
-        newUserForm.querySelector("input[name='new_username']").focus();
-      }
-
-      function closeAddUserModal() {
-        addUserModal.hidden = true;
-        adminGateForm.reset();
-        newUserForm.reset();
-        gateErrorEl.hidden = true;
-        newUserErrorEl.hidden = true;
-        adminGateForm.hidden = false;
-        newUserForm.hidden = true;
-        addModalTitle.textContent = "管理者驗證";
-      }
-
-      addUserButton.addEventListener("click", showGateStep);
-      closeAddModalButton.addEventListener("click", closeAddUserModal);
-      // 點彈窗外的深色背景也關閉。
-      addUserModal.addEventListener("click", function (event) {
-        if (event.target === addUserModal) {
-          closeAddUserModal();
-        }
-      });
-      backToGateButton.addEventListener("click", showGateStep);
-
-      // 第一步：管理者帳密驗證（打 /api/login，確認 role=admin 後才進第二步）。
-      adminGateForm.addEventListener("submit", async function (event) {
-        event.preventDefault();
-        gateErrorEl.hidden = true;
-        const formData = new FormData(adminGateForm);
-        const submitButton = adminGateForm.querySelector("button[type='submit']");
-        submitButton.disabled = true;
-        try {
-          const loginResponse = await fetch("/api/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              username: formData.get("admin_username"),
-              password: formData.get("admin_password"),
-            }),
-          }).catch(function () { return null; });
-          const loginData = loginResponse
-            ? await loginResponse.json().catch(function () { return {}; })
-            : {};
-          if (!loginResponse || !loginResponse.ok || !loginData.ok) {
-            gateErrorEl.textContent = (loginData && loginData.error) || "管理者帳密驗證失敗";
-            gateErrorEl.hidden = false;
-            return;
-          }
-          if (loginData.role !== "admin") {
-            gateErrorEl.textContent = "此帳號不是管理者，無法新增使用者";
-            gateErrorEl.hidden = false;
-            return;
-          }
-          showNewUserStep();
-        } finally {
-          submitButton.disabled = false;
-        }
-      });
-
-      // 第二步：真的呼叫新增 API（此時 session 已是 admin）。
-      newUserForm.addEventListener("submit", async function (event) {
-        event.preventDefault();
-        newUserErrorEl.hidden = true;
-        const formData = new FormData(newUserForm);
-        const newUsername = String(formData.get("new_username") || "").trim();
-        const newPassword = String(formData.get("new_password") || "").trim();
-        const confirmPassword = String(formData.get("new_password_confirm") || "").trim();
-        if (!newUsername || !newPassword) {
-          newUserErrorEl.textContent = "請輸入新使用者的帳號與密碼";
-          newUserErrorEl.hidden = false;
-          return;
-        }
-        if (newPassword !== confirmPassword) {
-          newUserErrorEl.textContent = "兩次輸入的密碼不一致";
-          newUserErrorEl.hidden = false;
-          return;
-        }
-        const submitButton = newUserForm.querySelector("button[type='submit']");
-        submitButton.disabled = true;
-        try {
-          const saveResponse = await fetch("/api/admin/users/save", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username: newUsername, password: newPassword, role: "user" }),
+      if (isHttpsPage) {
+        httpsBanner.hidden = false;
+        document.getElementById("http-switch-link").href =
+          window.location.href.replace(/^https:/i, "http:");
+        buildServerQueue().forEach(function (entry, index) {
+          const row = document.createElement("div");
+          row.className = "manual-connect-row";
+          const info = document.createElement("span");
+          info.className = "mc-label";
+          info.textContent = entry.label;
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.textContent = "登入";
+          btn.addEventListener("click", function () {
+            const username = String(usernameInput.value || "").trim();
+            const password = String(passwordInput.value || "").trim();
+            if (!username || !password) {
+              errorEl.textContent = "請先輸入帳號與密碼";
+              errorEl.hidden = false;
+              return;
+            }
+            saveLoginState();
+            submitLoginTo(entry.url, username, password);
           });
-          const saveData = await saveResponse.json().catch(function () { return {}; });
-          if (!saveResponse.ok || !saveData.ok) {
-            newUserErrorEl.textContent = (saveData && saveData.error) || "新增失敗";
-            newUserErrorEl.hidden = false;
-            return;
-          }
-          closeAddUserModal();
-          setAddStatus(`已新增使用者「${newUsername}」，可用這組帳密登入了`, false);
-        } finally {
-          submitButton.disabled = false;
-        }
-      });
-
-      // 跨伺服器表單登入失敗被導回來時，/api/login 會帶 login_error 參數；
-      // 這裡把錯誤顯示在登入表單下方（帳號預填，方便直接重試）。
-      const initialError = "{{ initial_login_error|e }}";
-      const initialUsername = "{{ initial_username|e }}";
-      if (initialError) {
-        errorEl.textContent = initialError;
-        errorEl.hidden = false;
-      }
-      if (initialUsername && !usernameInput.value) {
-        usernameInput.value = initialUsername;
+          row.appendChild(info);
+          row.appendChild(btn);
+          manualConnectList.appendChild(row);
+        });
+        retryNoteEl.textContent =
+          "已自動輪巡伺服器列表 3 次都連不上（HTTPS 下可能全部被瀏覽器封鎖）。可直接按各伺服器的「直接登入」，或改用 HTTP 版頁面。";
       }
 
       loadLoginState();
