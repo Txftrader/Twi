@@ -97,53 +97,6 @@
     details.advanced[open] summary { color: var(--text); }
     details.advanced .advanced-body { margin-top: 10px; display: grid; gap: 4px; font-size: 0.78rem; }
     .hint-line { font-size: 0.7rem; color: var(--muted); margin: 12px 0 0; line-height: 1.5; }
-    .env-banner {
-      display: grid;
-      gap: 8px;
-      margin: 14px 0 0;
-      padding: 10px 12px;
-      border: 1px solid rgba(74, 156, 255, 0.35);
-      border-radius: 12px;
-      background: rgba(74, 156, 255, 0.08);
-      font-size: 0.74rem;
-      line-height: 1.55;
-    }
-    .env-banner[hidden] { display: none; }
-    .manual-connect-list { display: grid; gap: 6px; margin-top: 4px; }
-    .manual-connect-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 10px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.03);
-    }
-    .manual-connect-row .mc-label { font-size: 0.76rem; word-break: break-all; }
-    .manual-connect-row .mc-label small { display: block; color: var(--muted); font-size: 0.66rem; }
-    .manual-connect-row button {
-      flex-shrink: 0;
-      min-height: 32px;
-      border-radius: 8px;
-      border: 1px solid rgba(74, 156, 255, 0.5);
-      background: rgba(74, 156, 255, 0.14);
-      color: var(--text);
-      font: inherit;
-      font-size: 0.74rem;
-      cursor: pointer;
-      padding: 0 12px;
-    }
-    .http-switch {
-      align-self: start;
-      display: inline-block;
-      padding: 6px 10px;
-      border-radius: 8px;
-      background: linear-gradient(135deg, var(--accent), #3078ff);
-      color: #fff;
-      font-weight: 700;
-      font-size: 0.74rem;
-    }
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -193,13 +146,6 @@
       <div class="server-box">
         <div><span>連線目標</span><strong id="selected-server-label">自動輪巡伺服器列表</strong></div>
         <div><span>帳號</span><strong id="login-username-preview">--</strong></div>
-      </div>
-
-      <div id="https-banner" class="env-banner" hidden>
-        <span>目前以 <b>HTTPS</b> 開啟本頁，瀏覽器會封鎖對 HTTP 伺服器的自動偵測，無法自動輪巡。</span>
-        <a id="http-switch-link" class="http-switch" href="#">切換到 HTTP 版（恢復自動輪巡）</a>
-        <span>或直接點擊下方伺服器登入（瀏覽器可能再詢問一次確認）：</span>
-        <div id="manual-connect-list" class="manual-connect-list"></div>
       </div>
 
       <form id="login-form" class="auth-form">
@@ -255,10 +201,12 @@
 
   <script>
     (function () {
+      // 憑證是簽給 Tailscale 的 MagicDNS 主機名稱，不能再用 IP，
+      // 請把下面換成 `tailscale status` 查到的實際名稱。
       const DEFAULT_SERVERS = [
-        { label: "伺服器1", url: "http://100.107.49.78:5000" },
-        { label: "伺服器2", url: "http://100.126.62.12:5000" },
-        { label: "伺服器3", url: "http://122.117.148.43:5000" }
+        { label: "伺服器1", url: "https://REPLACE-WITH-SERVER1-HOSTNAME.ts.net:5000" },
+        { label: "伺服器2", url: "https://REPLACE-WITH-SERVER2-HOSTNAME.ts.net:5000" },
+        { label: "伺服器3", url: "https://REPLACE-WITH-SERVER3-HOSTNAME.ts.net:5000" }
       ];
       const LOGIN_ROUNDS = 3;
       const PROBE_TIMEOUT_MS = 2500;
@@ -279,16 +227,16 @@
       const retryConnectButton = document.getElementById("retry-connect-button");
       const retryCancelButton = document.getElementById("retry-cancel-button");
 
-      const httpsBanner = document.getElementById("https-banner");
-      const manualConnectList = document.getElementById("manual-connect-list");
-      const isHttpsPage = window.location.protocol === "https:";
       let lastResults = [];
       let roaming = false;
 
       function normalizeBaseUrl(value) {
         const raw = String(value || "").trim();
         if (!raw) return "";
-        const withScheme = /^https?:\/\//i.test(raw) ? raw : ("http://" + raw);
+        // 手動輸入沒帶協定時預設補 https，跟登入頁本身（HTTPS）同協定，
+        // 避免又跑出混合內容警告。如果對方伺服器仍是純 HTTP，手動輸入時
+        // 請自行打上 http:// 開頭。
+        const withScheme = /^https?:\/\//i.test(raw) ? raw : ("https://" + raw);
         try {
           return new URL(withScheme).origin.replace(/\/$/, "");
         } catch (_error) {
@@ -465,7 +413,7 @@
               return;
             }
           }
-          if (round < LOGIN_ROUNDS) renderRetryList(results, isHttpsPage);
+          if (round < LOGIN_ROUNDS) renderRetryList(results, true);
         }
         lastResults = results;
         renderRetryList(lastResults, true);
@@ -528,39 +476,6 @@
         saveLoginState();
         updateLabels();
       });
-
-      if (isHttpsPage) {
-        httpsBanner.hidden = false;
-        document.getElementById("http-switch-link").href =
-          window.location.href.replace(/^https:/i, "http:");
-        buildServerQueue().forEach(function (entry, index) {
-          const row = document.createElement("div");
-          row.className = "manual-connect-row";
-          const info = document.createElement("span");
-          info.className = "mc-label";
-          // 只顯示名稱、不帶網址：HTTPS 橫幅清單也是手機看得到的地方。
-          info.textContent = entry.label;
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.textContent = "登入";
-          btn.addEventListener("click", function () {
-            const username = String(usernameInput.value || "").trim();
-            const password = String(passwordInput.value || "").trim();
-            if (!username || !password) {
-              errorEl.textContent = "請先輸入帳號與密碼";
-              errorEl.hidden = false;
-              return;
-            }
-            saveLoginState();
-            submitLoginTo(entry.url, username, password);
-          });
-          row.appendChild(info);
-          row.appendChild(btn);
-          manualConnectList.appendChild(row);
-        });
-        retryNoteEl.textContent =
-          "已自動輪巡伺服器列表 3 次都連不上（HTTPS 下可能全部被瀏覽器封鎖）。可直接按各伺服器的「直接登入」，或改用 HTTP 版頁面。";
-      }
 
       loadLoginState();
     }());
