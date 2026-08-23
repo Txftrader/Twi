@@ -217,16 +217,13 @@
 
   <script>
     (function () {
-      // 伺服器1、2：Tailscale 憑證簽給 MagicDNS 主機名稱（`tailscale status`
-      // 查到的名稱），走 https。
-      // 伺服器3：固定 IP、沒有 HTTPS 憑證，走純 http 加入輪巡。
-      // 注意：本頁若從 https 網址（如 GitHub Pages）開啟，瀏覽器的混合內容
-      // 政策會封鎖對 http 位址的探測與表單登入；要輪到伺服器3，請改用
-      // http 或本機方式開啟本頁。
+      // 伺服器1、2：Tailscale 憑證簽給 MagicDNS 主機名稱，走 https。
+      // 伺服器3：固定 IP、沒有 HTTPS 憑證，主程式另開純 HTTP 埠 5001
+      // 給 IP 直連（5000 只講 TLS，用 http 打會 ERR_TIMED_OUT）。
       const DEFAULT_SERVERS = [
         { label: "伺服器1", url: "https://i7-14700.taild027aa.ts.net:5000" },
         { label: "伺服器2", url: "https://csc-win10-mini.taild027aa.ts.net:5000" },
-        { label: "伺服器3", url: "http://122.117.148.43:5000" }
+        { label: "伺服器3", url: "http://122.117.148.43:5001" }
       ];
       const LOGIN_ROUNDS = 3;
       const PROBE_TIMEOUT_MS = 2500;

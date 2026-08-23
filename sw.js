@@ -2,7 +2,7 @@
 // 只快取「登入頁本身的靜態資源」，不快取 /api/* 等動態連線目標，
 // 以免快取到錯誤的伺服器回應。
 
-const CACHE_VERSION = "rtd-login-v2";
+const CACHE_VERSION = "rtd-login-v3";
 const CORE_ASSETS = [
   "./",
   "./index.html",
