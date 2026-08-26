@@ -161,7 +161,7 @@
       <h1>手機版即時走勢</h1>
 
       <div class="server-box">
-        <div><span>連線目標</span><strong id="selected-server-label">自動輪巡伺服器列表</strong></div>
+        <div><span>連線目標</span><strong id="selected-server-label">自動輪詢伺服器列表</strong></div>
         <div><span>帳號</span><strong id="login-username-preview">--</strong></div>
       </div>
 
@@ -193,7 +193,7 @@
               autocomplete="off"
             >
           </label>
-          <p class="tiny muted">填了手動 IP 會最優先嘗試；沒填就照下方內建伺服器列表依序輪巡。</p>
+          <p class="tiny muted">填了手動 IP 會最優先嘗試；沒填就照下方內建伺服器列表依序輪詢。</p>
         </div>
       </details>
 
@@ -453,7 +453,7 @@
           // 用 probeServerVisible 確保畫面上看得到「輪巡中：手動伺服器」，
           // 不會因為 http 被瀏覽器秒擋而像是沒被嘗試過。
           for (let i = 0; i < queue.length; i++) {
-            selectedServerLabel.textContent = "輪巡中：" + queue[i].label;
+            selectedServerLabel.textContent = "輪詢中：" + queue[i].label;
             const alive = await probeServerVisible(queue[i].url, PROBE_TIMEOUT_MS, 500);
             results[i].alive = alive;
             if (alive === true) {
@@ -486,7 +486,7 @@
         } finally {
           roaming = false;
           setLoginBusy("");
-          selectedServerLabel.textContent = "自動輪巡伺服器列表";
+          selectedServerLabel.textContent = "自動輪詢伺服器列表";
         }
       }
 
@@ -516,7 +516,7 @@
 
       retryCancelButton.addEventListener("click", function () {
         retryModal.hidden = true;
-        selectedServerLabel.textContent = "自動輪巡伺服器列表";
+        selectedServerLabel.textContent = "自動輪詢伺服器列表";
       });
 
       manualInput.addEventListener("input", saveLoginState);
