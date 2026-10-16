@@ -152,6 +152,66 @@
     .retry-fail { color: var(--rise); }
     .retry-unknown { color: var(--muted); }
     .gate-actions { display: grid; gap: 8px; margin-top: 12px; }
+    .server-btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .server-select-btn {
+      flex: 1;
+      min-width: 100px;
+      min-height: 44px;
+      background: linear-gradient(145deg, rgba(22, 38, 61, 0.7), rgba(19, 33, 55, 0.9));
+      border: 1px solid rgba(74, 156, 255, 0.3);
+      border-radius: 12px;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      position: relative;
+      overflow: hidden;
+      letter-spacing: 0.03em;
+    }
+    .server-select-btn::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(rgba(255, 255, 255, 0.05), transparent);
+      pointer-events: none;
+    }
+    .server-select-btn:hover {
+      background: linear-gradient(145deg, rgba(30, 50, 80, 0.8), rgba(22, 38, 61, 1));
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 6px 16px rgba(74, 156, 255, 0.2);
+      transform: translateY(-1px);
+    }
+    .server-select-btn:active {
+      transform: translateY(2px) scale(0.97);
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.1);
+      background: linear-gradient(145deg, rgba(15, 25, 45, 0.9), rgba(10, 20, 35, 1));
+      border-color: rgba(74, 156, 255, 0.5);
+    }
+    .server-select-btn::after {
+      content: "▶";
+      font-size: 0.6rem;
+      margin-left: 6px;
+      opacity: 0.5;
+      transition: transform 0.2s;
+    }
+    .server-select-btn:hover::after {
+      transform: translateX(2px);
+      opacity: 0.9;
+    }
   </style>
 </head>
 <body data-page="login">
@@ -194,6 +254,9 @@
             >
           </label>
           <p class="tiny muted">填了手動 IP 會最優先嘗試；沒填就照下方內建伺服器列表依序輪詢。</p>
+          <div id="advanced-server-buttons" class="server-btn-group">
+            <!-- 由 JS 動態生成伺服器按鈕 -->
+          </div>
         </div>
       </details>
 
@@ -245,6 +308,7 @@
       const retryNoteEl = document.getElementById("retry-note");
       const retryConnectButton = document.getElementById("retry-connect-button");
       const retryCancelButton = document.getElementById("retry-cancel-button");
+      const advancedServerButtons = document.getElementById("advanced-server-buttons");
 
       let lastResults = [];
       let roaming = false;
@@ -437,6 +501,32 @@
         });
       }
 
+      function renderAdvancedServerButtons() {
+        if (!advancedServerButtons) return;
+        advancedServerButtons.innerHTML = DEFAULT_SERVERS.map(function (server, index) {
+          return '<button type="button" class="server-select-btn" data-index="' + index + '">' +
+            server.label + '</button>';
+        }).join("");
+
+        advancedServerButtons.querySelectorAll(".server-select-btn").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            const index = Number(btn.getAttribute("data-index"));
+            const server = DEFAULT_SERVERS[index];
+            const username = String(usernameInput.value || "").trim();
+            const password = String(passwordInput.value || "").trim();
+
+            if (!username || !password) {
+              errorEl.textContent = "請先輸入帳號與密碼";
+              errorEl.hidden = false;
+              return;
+            }
+            errorEl.hidden = true;
+            saveLoginState();
+            submitLoginTo(server.url, username, password);
+          });
+        });
+      }
+
       async function runRoamingLogin(username, password) {
         const queue = buildServerQueue();
         if (!queue.length) {
@@ -526,6 +616,7 @@
       });
 
       loadLoginState();
+      renderAdvancedServerButtons();
 
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", function () {
